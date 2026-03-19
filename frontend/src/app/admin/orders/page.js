@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../../lib/api';
-import { Clock, ChefHat, CheckCircle, XCircle, Eye, X } from 'lucide-react';
+import { Clock, ChefHat, CheckCircle, XCircle, Eye, X, Printer, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusColors = {
@@ -45,6 +45,72 @@ export default function OrdersPage() {
     } catch (err) {
       toast.error(err.message);
     }
+  };
+
+  const generateInvoiceHTML = (order) => {
+    const itemsRows = (order.items || []).map(item =>
+      `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#d4c5a0;">${item.quantity}x ${item.item_name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #2a2a2a;color:#c4a44a;text-align:right;">€${(parseFloat(item.item_price) * item.quantity).toFixed(2)}</td>
+      </tr>`
+    ).join('');
+
+    return `<!DOCTYPE html><html><head><title>Invoice ${order.order_number}</title>
+      <style>
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } @page { margin: 20mm; } }
+        body { font-family: 'Georgia', serif; background: #0d0b08; color: #e8e0d0; margin: 0; padding: 40px; }
+        .invoice { max-width: 500px; margin: 0 auto; border: 1px solid #2a2218; padding: 40px; background: #141210; }
+        .header { text-align: center; border-bottom: 2px solid #c4a44a; padding-bottom: 20px; margin-bottom: 24px; }
+        .header h1 { font-size: 28px; color: #c4a44a; margin: 0 0 4px 0; letter-spacing: 3px; }
+        .header p { color: #8a7a5a; font-size: 12px; letter-spacing: 2px; margin: 0; }
+        .meta { display: flex; justify-content: space-between; font-size: 13px; color: #8a7a5a; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2218; }
+        .meta div span { display: block; color: #d4c5a0; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { text-align: left; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #8a7a5a; border-bottom: 1px solid #2a2a2a; }
+        th:last-child { text-align: right; }
+        .total-row td { border-top: 2px solid #c4a44a; font-weight: bold; font-size: 16px; padding-top: 12px; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #2a2218; font-size: 12px; color: #6a5a3a; }
+      </style></head><body>
+      <div class="invoice">
+        <div class="header">
+          <h1>74 LOUNGE BAR</h1>
+          <p>INVOICE</p>
+        </div>
+        <div class="meta">
+          <div>Order<span>${order.order_number}</span></div>
+          <div>Date<span>${new Date(order.created_at).toLocaleDateString()}</span></div>
+          <div>Customer<span>${order.customer_name}</span></div>
+        </div>
+        ${order.table_number ? `<p style="font-size:13px;color:#8a7a5a;margin-bottom:16px;">Table: <span style="color:#d4c5a0;">${order.table_number}</span></p>` : ''}
+        <table>
+          <thead><tr><th>Item</th><th style="text-align:right;">Amount</th></tr></thead>
+          <tbody>
+            ${itemsRows}
+            <tr class="total-row">
+              <td style="padding:12px;color:#d4c5a0;">Total</td>
+              <td style="padding:12px;color:#c4a44a;text-align:right;">€${parseFloat(order.total).toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Thank you for visiting 74 Lounge Bar</p>
+          <p>Cash Payment Only</p>
+        </div>
+      </div></body></html>`;
+  };
+
+  const printInvoice = (order) => {
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    printWindow.document.write(generateInvoiceHTML(order));
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 300);
+  };
+
+  const sendWhatsApp = (order) => {
+    const phone = order.phone.replace(/[^0-9]/g, '');
+    const items = (order.items || []).map(i => `  ${i.quantity}x ${i.item_name} - €${(parseFloat(i.item_price) * i.quantity).toFixed(2)}`).join('\n');
+    const message = `*74 LOUNGE BAR - Order Invoice*\n\nOrder: ${order.order_number}\nDate: ${new Date(order.created_at).toLocaleDateString()}\n\n*Items:*\n${items}\n\n*Total: €${parseFloat(order.total).toFixed(2)}*\n\nThank you for your order! 🍸\nPayment: Cash Only`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
@@ -120,6 +186,20 @@ export default function OrdersPage() {
                             Cancel
                           </button>
                         )}
+                        {order.status === 'completed' && (
+                          <>
+                            <button onClick={() => printInvoice(order)}
+                              title="Print Invoice"
+                              className="p-1.5 text-lounge-500 hover:text-gold-400 transition-colors">
+                              <Printer size={14} />
+                            </button>
+                            <button onClick={() => sendWhatsApp(order)}
+                              title="Send Invoice via WhatsApp"
+                              className="p-1.5 text-lounge-500 hover:text-green-400 transition-colors">
+                              <MessageCircle size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -172,6 +252,21 @@ export default function OrdersPage() {
                   <span className="text-gold-400">€{parseFloat(selected.total).toFixed(2)}</span>
                 </div>
               </div>
+
+              {selected.status === 'completed' && (
+                <div className="flex gap-3 pt-4 mt-4 border-t border-lounge-800/30">
+                  <button onClick={() => printInvoice(selected)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gold-500/10 text-gold-400 rounded hover:bg-gold-500/20 transition-colors text-sm">
+                    <Printer size={15} />
+                    Print Invoice
+                  </button>
+                  <button onClick={() => sendWhatsApp(selected)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/10 text-green-400 rounded hover:bg-green-500/20 transition-colors text-sm">
+                    <MessageCircle size={15} />
+                    WhatsApp
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

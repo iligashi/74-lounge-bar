@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../lib/api';
-import { Clock, CheckCircle, XCircle, Phone, Users, Calendar } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Phone, Users, Calendar, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusColors = {
@@ -74,6 +74,12 @@ export default function ReservationsPage() {
               </div>
 
               <div className="flex items-center space-x-2">
+                <a href={`https://wa.me/${res.phone.replace(/[^0-9]/g, '')}`}
+                  target="_blank" rel="noopener noreferrer"
+                  title="Contact on WhatsApp"
+                  className="flex items-center space-x-1 px-3 py-1.5 text-xs bg-green-600/10 text-green-400 rounded hover:bg-green-600/20 transition-colors">
+                  <MessageCircle size={12} /><span>WhatsApp</span>
+                </a>
                 {res.status === 'pending' && (
                   <>
                     <button onClick={() => updateStatus(res.id, 'confirmed')}

@@ -5,6 +5,11 @@ export const metadata = {
   title: '74 Lounge Bar — Premium Lounge Experience',
   description: 'Where elegance meets taste. Premium cocktails, refined cuisine, and an unforgettable atmosphere.',
   keywords: '74 Lounge Bar, lounge, bar, restaurant, cocktails, premium dining',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }) {
