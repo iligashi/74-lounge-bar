@@ -5,3 +5,8 @@ node_modules/
 data/
 uploads/
 .DS_Store
+
+# Local env and build output
+.env*.local
+build/
+dist/
