@@ -31,7 +31,18 @@ DB_USER=your_local_mysql_user
 DB_PASSWORD=your_local_mysql_password
 PORT=5000
 FRONTEND_URL=http://localhost:3000
+# Required: random secret of at least 32 characters
+JWT_SECRET=
+# Creates the first admin on startup if none exists (min. 12 characters)
+ADMIN_USERNAME=
+ADMIN_PASSWORD=
 ```
+
+There is no built-in admin account. On first start the API creates one from
+`ADMIN_USERNAME` / `ADMIN_PASSWORD`; once it exists you can remove those
+variables and change the password from the admin panel. Older deployments that
+still use the previously published default password are locked out of the admin
+panel until `ADMIN_PASSWORD` is set and the API is restarted, which rotates it.
 
 Start the frontend and API together:
 
