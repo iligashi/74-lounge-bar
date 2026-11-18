@@ -42,10 +42,9 @@ export default function OrderPage() {
     }
     setSubmitting(true);
     try {
+      // The server prices the order from the menu; only ids and quantities are sent
       const orderItems = items.map(item => ({
         menu_item_id: item.menu_item_id || item.id,
-        name: item.name,
-        price: item.price,
         quantity: item.quantity,
       }));
       const result = await api.createOrder({ ...form, items: orderItems });

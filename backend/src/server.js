@@ -3,9 +3,12 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcryptjs');
+const { requireJwtSecret } = require('./config/env');
+const { bootstrapAdmin } = require('./lib/admin-bootstrap');
 
 async function start() {
+  requireJwtSecret();
+
   // Create database if not exists
   const initConn = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
@@ -106,13 +109,8 @@ async function start() {
     )
   `);
 
-  // Seed admin
-  const [admins] = await pool.query('SELECT id FROM admin_users WHERE username = ?', ['admin']);
-  if (admins.length === 0) {
-    const hash = bcrypt.hashSync('admin123', 10);
-    await pool.query('INSERT INTO admin_users (username, password) VALUES (?, ?)', ['admin', hash]);
-    console.log('Default admin created: admin / admin123');
-  }
+  // First admin comes from ADMIN_USERNAME / ADMIN_PASSWORD; there is no default account
+  await bootstrapAdmin(pool);
 
   // Seed content
   const contentDefaults = [
@@ -196,15 +194,13 @@ async function start() {
   const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map(s => s.trim());
   app.use(cors({
     origin: function(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Allow all in production for now
-      }
+      // Requests without an Origin (curl, server-to-server) are not CORS requests
+      callback(null, !origin || allowedOrigins.includes(origin));
     },
     credentials: true
   }));
-  app.use(express.json());
+  app.disable('x-powered-by');
+  app.use(express.json({ limit: '100kb' }));
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
   app.use('/api/auth', require('./routes/auth'));
